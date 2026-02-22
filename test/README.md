@@ -4,6 +4,8 @@ To run all tests, including the Go tests, run from repository root:
 
     sudo -E make check
 
+    sudo --preserve-env=PATH -E make check
+
 To run only the integration tests, run from the test directory:
 
     sudo -E ./main.sh

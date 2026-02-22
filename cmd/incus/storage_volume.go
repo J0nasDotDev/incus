@@ -2700,6 +2700,13 @@ func (c *cmdStorageVolumeFileMount) Command() *cobra.Command {
 	cmd.Short = i18n.G("Mount files from custom storage volumes")
 	cmd.Long = cli.FormatSection(i18n.G("Description"), i18n.G(
 		`Mount files from custom storage volumes`))
+	// TODO: Write a correct exemple.
+	cmd.Example = cli.FormatSection("", i18n.G(
+		`incus file mount foo/root fooroot
+   To mount /root from the instance foo onto the local fooroot directory.
+
+incus file mount foo
+   Start an SFTP server over SSH, connected to instance foo filesystem.`))
 
 	cmd.Flags().StringVar(&c.flagListen, "listen", "", i18n.G("Setup SSH SFTP listener on address:port instead of mounting"))
 	cmd.Flags().BoolVar(&c.flagAuthNone, "no-auth", false, i18n.G("Disable authentication when using SSH SFTP listener"))
@@ -2735,10 +2742,15 @@ func (c *cmdStorageVolumeFileMount) Run(cmd *cobra.Command, args []string) error
 		return err
 	}
 
+	fmt.Printf("DEV: raw arg %q\n", args)
 	// Parse the input
+
 	volName, volType := parseVolume("custom", args[1])
+	fmt.Printf("DEV: volName arg %q\n", volName)
+	fmt.Printf("DEV: volType arg %q\n", volType)
 
 	// Parse remote.
+	fmt.Printf("DEV: remote arg %q\n", args[0])
 	resources, err := c.global.parseServers(args[0])
 	if err != nil {
 		return err
@@ -2750,6 +2762,8 @@ func (c *cmdStorageVolumeFileMount) Run(cmd *cobra.Command, args []string) error
 
 	// Determine the target if specified.
 	if len(args) >= 3 {
+		fmt.Printf("DEV: target arg %q\n", args[len(args)-1])
+
 		targetPath = filepath.Clean(args[len(args)-1])
 		sb, err := os.Stat(targetPath)
 		if err != nil {
@@ -2766,6 +2780,8 @@ func (c *cmdStorageVolumeFileMount) Run(cmd *cobra.Command, args []string) error
 		return errors.New(i18n.G("Target path and --listen flag cannot be used together"))
 	}
 
+	fmt.Printf("DEV: resource.name arg %q\n", resource.name)
+
 	// Look for sshfs command if no SSH SFTP listener mode specified and a target mount path was specified.
 	entity := fmt.Sprintf("%s/%s/%s", resource.name, volType, volName)
 
@@ -2779,6 +2795,19 @@ func (c *cmdStorageVolumeFileMount) Run(cmd *cobra.Command, args []string) error
 		defer func() { _ = sftpConn.Close() }()
 
 		return sshfsMount(cmd.Context(), sftpConn, entity, "", targetPath)
+	}
+
+	// TODO: Check if the entities (pool, volumes) exists before starting the SFTP server.
+	// DEV: raw arg ["xxxxxx" "yyyyyy"]
+	// DEV: volName arg "yyyyyy"
+	// DEV: volType arg "custom"
+	// DEV: remote arg "xxxxxx"
+	// DEV: resource.name arg "xxxxxx"
+
+	// Check if the pool and the volume exist before starting the SFTP server.
+	_, _, err = resource.server.GetStoragePoolVolume(resource.name, volType, volName)
+	if err != nil {
+		return err
 	}
 
 	return sshSFTPServer(cmd.Context(), func() (net.Conn, error) {
