@@ -69,8 +69,58 @@ test_storage_volume_filemanip() {
     incus storage volume file create --type=symlink "${pool}" vol1/tmp/create-symlink foo
     [ "$(incus exec filemanip --project=test -- readlink /v1/tmp/create-symlink)" = "foo" ]
 
+
+    # Test SFTP functionality.
+    cmd=$(
+        unset -f incus
+        command -v incus
+    )
+
+    $cmd storage volume file mount "${pool}" doesnotexist &
+    mountPID=$!
+    sleep 1
+    if kill -0 "$mountPID" 2>/dev/null; then
+       echo "started SSH SFTP server despite non-existent volume"
+       kill -9 ${mountPID}
+       false
+    fi
+    if wait "$mountPID" 2>/dev/null; then
+       exitCode=0
+    else
+       exitCode=$?
+    fi
+    if [ "${exitCode:-0}" -ne 1 ]; then
+       echo "unexpected exit code (${exitCode}), when starting SSH SFTP server on non-existent volume"
+       false
+    fi
+
+    $cmd storage volume file mount doesnotexist vol1 &
+    mountPID=$!
+    sleep 1
+    if kill -0 "$mountPID" 2>/dev/null; then
+       echo "started SSH SFTP server despite non-existent pool"
+       kill -9 ${mountPID}
+       false
+    fi
+    if wait "$mountPID" 2>/dev/null; then
+       exitCode=0
+    else
+       exitCode=$?
+    fi
+    if [ "${exitCode:-0}" -ne 1 ]; then
+       echo "unexpected exit code (${exitCode}), when starting SSH SFTP server on non-existent pool"
+       false
+    fi
+
+    $cmd storage volume file mount "${pool}" vol1 --listen=127.0.0.1:2022 --no-auth &
+    mountPID=$!
+    sleep 1
+
+    output=$(curl -s -S --insecure sftp://127.0.0.1:2022/pull_file || true)
+    kill -9 ${mountPID}
     incus storage volume detach "${pool}" vol1 filemanip
     incus delete filemanip -f
+    [ "$output" = "pull" ]
 
     rm -rf "${TEST_DIR}"/source
     rm -rf "${TEST_DIR}/dest"

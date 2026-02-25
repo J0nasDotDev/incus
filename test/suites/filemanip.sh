@@ -147,6 +147,27 @@ test_filemanip() {
         unset -f incus
         command -v incus
     )
+
+    $cmd file mount doesnotexist &
+    mountPID=$!
+    sleep 1
+
+    if kill -0 "$mountPID" 2>/dev/null; then
+        echo "started SSH SFTP server despite non-existent instance"
+        kill -9 ${mountPID}
+        false
+    fi
+
+    if wait "$mountPID" 2>/dev/null; then
+        exitCode=0
+    else
+        exitCode=$?
+    fi
+    if [ "${exitCode:-0}" -ne 1 ]; then
+        echo "unexpected exit code (${exitCode}), when starting SSH SFTP server on non-existent instance"
+        false
+    fi
+
     $cmd file mount filemanip --listen=127.0.0.1:2022 --no-auth &
     mountPID=$!
     sleep 1
