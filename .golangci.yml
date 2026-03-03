@@ -77,6 +77,8 @@ linters:
         text: "avoid meaningless package names"
       - path: internal/server/util/
         text: "avoid meaningless package names"
+      - path: internal/server/scriptlet/log/
+        text: "avoid package names that conflict with Go standard library package names"
     paths:
       - third_party$
       - builtin$
