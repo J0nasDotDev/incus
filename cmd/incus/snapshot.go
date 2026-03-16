@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
+	"path"
 	"slices"
 	"strings"
 	"time"
@@ -189,7 +191,32 @@ func (c *cmdSnapshotCreate) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return op.Wait()
+	err = op.Wait()
+	if err != nil {
+		return err
+	}
+
+	opInfo := op.Get()
+	fmt.Printf("---> DEV: %v\n", opInfo) // DEV
+	// {017e33df-ca57-4905-8a9b-10fc825d07f0 task Snapshotting instance 2026-03-16 09:43:03.264644288 +0100 CET 2026-03-16 09:43:03.264644288 +0100 CET Success Success map[instances:[/1.0/instances/deb1] instances_snapshots:[/1.0/instances/deb1/snapshots/snap3]] map[] false  none}
+
+	snapshots, ok := opInfo.Resources["instances_snapshots"]
+	if !ok || len(snapshots) == 0 {
+		return errors.New(i18n.G("Didn't get name of new instance snapshot from the server"))
+	}
+
+	fmt.Println("---> DEV: hasSnapName", hasSnapName) // DEV
+
+	if len(snapshots) == 1 && !hasSnapName {
+		uri, err := url.Parse(snapshots[0])
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf(i18n.G("Snapshot name is: %s")+"\n", path.Base(uri.Path))
+	}
+
+	return nil
 }
 
 // Delete.

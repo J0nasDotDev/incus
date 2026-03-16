@@ -391,6 +391,8 @@ func (c *cmdCreate) create(conf *config.Config, parsed []*u.Parsed, launch bool)
 		opInfo = op.Get()
 	}
 
+	fmt.Printf("---> DEV: %v", opInfo) // DEV
+
 	instances, ok := opInfo.Resources["instances"]
 	if !ok || len(instances) == 0 {
 		return nil, errors.New(i18n.G("Didn't get name of new instance from the server"))
