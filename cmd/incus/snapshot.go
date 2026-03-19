@@ -213,7 +213,7 @@ func (c *cmdSnapshotCreate) Run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		fmt.Printf(i18n.G("Snapshot name is: %s")+"\n", path.Base(uri.Path))
+		fmt.Printf(i18n.G("Instance snapshot name is: %s")+"\n", path.Base(uri.Path))
 	}
 
 	return nil
