@@ -3244,7 +3244,32 @@ func (c *cmdStorageVolumeSnapshotCreate) Run(cmd *cobra.Command, args []string) 
 		return err
 	}
 
-	return op.Wait()
+	err = op.Wait()
+	if err != nil {
+		return err
+	}
+
+	opInfo := op.Get()
+	fmt.Printf("---> DEV: %v\n", opInfo) // DEV
+	// ---> DEV: {171a6714-b765-4462-8538-adb3d1fbcd06 task Creating storage volume snapshot 2026-03-19 18:29:18.098479315 +0100 CET 2026-03-19 18:29:18.098479315 +0100 CET Success Success map[storage_volume_snapshots:[/1.0/storage-pools/default/volumes/custom/foo/snapshots/snap1] storage_volumes:[/1.0/storage-pools/default/volumes/custom/foo]] map[] false  none}
+
+	snapshots, ok := opInfo.Resources["storage_volume_snapshots"]
+	if !ok || len(snapshots) == 0 {
+		return errors.New(i18n.G("Didn't get name of new volume snapshot from the server"))
+	}
+
+	fmt.Println("---> DEV: hasSnapName", hasSnapName) // DEV
+
+	if len(snapshots) == 1 && !hasSnapName {
+		uri, err := url.Parse(snapshots[0])
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf(i18n.G("Volume snapshot name is: %s")+"\n", path.Base(uri.Path))
+	}
+
+	return nil
 }
 
 // Snapshot delete.
